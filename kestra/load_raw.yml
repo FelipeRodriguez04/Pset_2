@@ -409,19 +409,27 @@ tasks:
       source_format = "{{ vars.files[render(vars.run_month)].format }}"
 
       if source_format == "xlsx":
-          df = pd.read_excel(
-              "source_file",
-              dtype=str,
-              keep_default_na=False,
-              engine="openpyxl"
-          )
+        df = pd.read_excel(
+            "source_file",
+            dtype=str,
+            keep_default_na=False,
+            engine="openpyxl"
+        )
 
-          df.to_csv(
-              "data.csv",
-              index=False,
-              sep=";",
-              encoding="utf-8"
-          )
+        if "Fecha" in df.columns:
+            fechas = pd.to_datetime(
+                df["Fecha"],
+                errors="coerce"
+            )
+
+            df["Fecha"] = fechas.dt.strftime("%d/%m/%Y")
+
+        df.to_csv(
+            "data.csv",
+            index=False,
+            sep=";",
+            encoding="utf-8"
+        )
 
       elif source_format == "csv":
           shutil.copyfile(
