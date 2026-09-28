@@ -63,6 +63,23 @@ services:
 
     depends_on:
       - kestra-db
+  spark:
+    image: apache/spark:3.5.9-scala2.12-java17-python3-r-ubuntu
+
+    volumes:
+      - ./spark:/app/spark
+
+    environment:
+      HOME: /tmp
+
+      SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT}
+      SNOWFLAKE_USER: ${SNOWFLAKE_USER}
+      SNOWFLAKE_PASSWORD: ${SNOWFLAKE_PASSWORD}
+      SNOWFLAKE_WAREHOUSE: ${SNOWFLAKE_WAREHOUSE}
+      SNOWFLAKE_DATABASE: ${SNOWFLAKE_DATABASE}
+      SNOWFLAKE_ROLE: ${SNOWFLAKE_ROLE}
+
+    command: ["tail", "-f", "/dev/null"]
 
 volumes:
   kestra-db-data:
