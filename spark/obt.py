@@ -176,22 +176,25 @@ def main():
         assert_unique(dim_fecha, ["FECHA"], "dim_fecha")
         assert_unique(covered_months, ["SOURCE_MONTH"], "meses Bronze")
 
-        ranges = fact.groupBy("PROVINCIA", "CANTON").agg(
-            F.min("FECHA").alias("FECHA_MIN"),
-            F.max("FECHA").alias("FECHA_MAX"),
+        month_starts = covered_months.withColumn(
+            "MONTH_START", F.to_date(F.concat(F.col("SOURCE_MONTH"), F.lit("-01")))
+        )
+        if month_starts.filter(
+            F.col("MONTH_START").isNull()
+            | (F.date_format("MONTH_START", "yyyy-MM") != F.col("SOURCE_MONTH"))
+        ).limit(1).count():
+            raise ValueError("Bronze contiene meses de origen inválidos")
+
+        # Cada cantón tiene una fila por cada día de los meses cargados,
+        # incluso antes de su primer incidente y después del último.
+        covered_dates = month_starts.select(
+            F.explode(
+                F.sequence(F.col("MONTH_START"), F.last_day("MONTH_START"))
+            ).alias("FECHA")
         )
         calendar = (
-            ranges
-            .select(
-                "PROVINCIA",
-                "CANTON",
-                F.explode(
-                    F.sequence(F.col("FECHA_MIN"), F.col("FECHA_MAX"))
-                ).alias("FECHA"),
-            )
-            .withColumn("SOURCE_MONTH", F.date_format("FECHA", "yyyy-MM"))
-            .join(covered_months, on="SOURCE_MONTH", how="inner")
-            .drop("SOURCE_MONTH")
+            dim_canton.select("PROVINCIA", "CANTON")
+            .crossJoin(covered_dates)
         )
 
         uncovered_fact = fact.join(calendar, on=KEYS, how="left_anti").count()
